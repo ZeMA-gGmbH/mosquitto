@@ -1,0 +1,57 @@
+﻿{
+  "configurations": [
+    {
+      "name": "x64-Debug",
+      "generator": "Ninja",
+      "configurationType": "Debug",
+      "inheritEnvironments": [ "clang_cl_x64" ],
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "variables": [
+        {
+          "name": "WITH_TLS",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "WITH_CLIENTS",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "WITH_WEBSOCKETS",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "WITH_THREADING",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "DOCUMENTATION",
+          "value": "False",
+          "type": "BOOL"
+        },
+        {
+          "name": "CJSON_DIR",
+          "value": "C:/Users/d.kuhn/Projekte/cJSON/",
+          "type": "STRING"
+        },
+        {
+          "name": "CJSON_INCLUDE_DIR",
+          "value": "C:/Users/d.kuhn/Projekte/cJSON/",
+          "type": "PATH"
+        },
+        {
+          "name": "CJSON_LIBRARY",
+          "value": "C:/Users/d.kuhn/Projekte/cJSON/cjson/out/build/x64-Debug/cjson.lib",
+          "type": "FILEPATH"
+        }
+      ]
+    }
+  ]
+}
