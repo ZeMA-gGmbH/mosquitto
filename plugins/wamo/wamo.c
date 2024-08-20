@@ -33,6 +33,7 @@ Contributors:
  * Note that this only works on Mosquitto 2.0 or later.
  */
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "mosquitto_broker.h"
@@ -50,6 +51,8 @@ static cJSON* subscribedTopics = NULL;
 static int callback_control(int event, void* event_data, void* userdata)
 {
 	struct mosquitto_evt_acl_check* ed = event_data;
+	char* payload = NULL;
+	uint32_t payload_len;
 
 	UNUSED(event);
 	UNUSED(userdata);
@@ -64,14 +67,38 @@ static int callback_control(int event, void* event_data, void* userdata)
 		json_create_array(subscribedTopics, topic);
 		json_add_id_to_array(subscribedTopics, topic, client_id);
 		char* json_string = cJSON_Print(subscribedTopics);
+		payload = cJSON_PrintUnformatted(subscribedTopics);
 		mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: client with id %s subscribed to topic %s", client_id, topic);
 		mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: subscribed topics %s", json_string);
+
+		if (payload == NULL) return MOSQ_ERR_MALFORMED_PACKET;
+
+		payload_len = strlen(payload);
+		if (payload_len > MQTT_MAX_PAYLOAD) {
+			free(payload);
+			return MOSQ_ERR_PAYLOAD_SIZE;
+		}
+		mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: DEBUG MESSAGE BEFORE PUBLISHING ...");
+
+		mosquitto_broker_publish(NULL, "mqtt/subscriptions",
+			(int)payload_len, payload, 0, true, NULL);
 	}
 	else if (access == MOSQ_ACL_UNSUBSCRIBE) {
 		json_del_id_from_array(subscribedTopics, topic, client_id);
 		char* json_string = cJSON_Print(subscribedTopics);
+		payload = cJSON_PrintUnformatted(subscribedTopics);
 		mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: client with id %s unscribed to topic %s", client_id, topic);
 		mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: subscribed topics %s", json_string);
+
+		if (payload == NULL) return MOSQ_ERR_MALFORMED_PACKET;
+
+		payload_len = strlen(payload);
+		if (payload_len > MQTT_MAX_PAYLOAD) {
+			free(payload);
+			return MOSQ_ERR_PAYLOAD_SIZE;
+		}
+		mosquitto_broker_publish(NULL, "mqtt/subscriptions",
+			(int)payload_len, payload, 0, true, NULL);
 	}
 
 

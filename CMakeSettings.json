@@ -48,8 +48,13 @@
         },
         {
           "name": "CJSON_LIBRARY",
-          "value": "C:/Users/d.kuhn/Projekte/cJSON/cjson/out/build/x64-Debug/cjson.lib",
+          "value": "C:\\Users\\d.kuhn\\Projekte\\cJSON\\cjson\\out\\build\\x64-Debug\\cjson.lib",
           "type": "FILEPATH"
+        },
+        {
+          "name": "WITH_STATIC_LIBRARIES",
+          "value": "False",
+          "type": "BOOL"
         }
       ]
     }

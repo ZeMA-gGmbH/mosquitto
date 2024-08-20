@@ -27,18 +27,21 @@ if (CJSON_FOUND )
 	include_directories(${CLIENT_INC})
 	link_directories(${CLIENT_DIR} ${mosquitto_SOURCE_DIR})
 
-	add_library(wamo MODULE
+	add_library(wamo MODULE 
 		json_help.c
 		json_help.h
 		wamo.c)
-
+	
 	set_target_properties(wamo PROPERTIES
 		POSITION_INDEPENDENT_CODE 1
 	)
 	set_target_properties(wamo PROPERTIES PREFIX "")
+	set_target_properties(wamo PROPERTIES IMPORTED_IMPLIB ${CJSON_LIBRARIES})
 
-	target_link_libraries(wamo ${CJSON_LIBRARIES})
+   	target_link_libraries(wamo ${CJSON_LIBRARIES})
 	if(WIN32)
+		set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+		set_target_properties(wamo PROPERTIES IMPORTED_IMPLIB mosquitto)
 		target_link_libraries(wamo mosquitto)
 		install(TARGETS wamo
 			DESTINATION "${CMAKE_INSTALL_BINDIR}")
