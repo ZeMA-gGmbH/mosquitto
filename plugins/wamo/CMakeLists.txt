@@ -18,37 +18,37 @@
 if (CJSON_FOUND )
 	add_definitions("-DWITH_CJSON")
 
-	set( CLIENT_INC ${mosquitto_SOURCE_DIR} ${mosquitto_SOURCE_DIR}/include
-		${STDBOOL_H_PATH} ${STDINT_H_PATH} ${mosquitto_SOURCE_DIR}/deps 
-		${mosquitto_SOURCE_DIR}/src ${CJSON_INCLUDE_DIRS} )
+	set (MOSQUITTO_IDIR "" CACHE FILEPATH "C:/Program Files/mosquitto/devel/" )
+	set (MOSQUITTO_LIBRARIES "" CACHE FILEPATH "C:/Program Files/mosquitto/devel/")
+	set (PLUGIN_NAME wamo)
 
-	set( CLIENT_DIR ${mosquitto_BINARY_DIR}/lib ${CJSON_DIR})
-
-	include_directories(${CLIENT_INC})
-	link_directories(${CLIENT_DIR} ${mosquitto_SOURCE_DIR})
-
-	add_library(wamo MODULE 
+	add_library(${PLUGIN_NAME} MODULE
+		${PLUGIN_NAME}.c
 		json_help.c
 		json_help.h
-		wamo.c)
-	
-	set_target_properties(wamo PROPERTIES
+	)
+
+	target_include_directories(${PLUGIN_NAME} PRIVATE
+		"${CJSON_INCLUDE_DIRS}"
+		"${STDBOOL_H_PATH} ${STDINT_H_PATH}"
+		"${mosquitto_SOURCE_DIR}"
+		"C:/Program Files/mosquitto/devel/"
+	)
+
+	target_link_directories(${PLUGIN_NAME} PRIVATE ${MOSQUITTO_LIBRARIES} )
+
+	set_target_properties(${PLUGIN_NAME} PROPERTIES
+		PREFIX ""
 		POSITION_INDEPENDENT_CODE 1
 	)
-	set_target_properties(wamo PROPERTIES PREFIX "")
-	set_target_properties(wamo PROPERTIES IMPORTED_IMPLIB ${CJSON_LIBRARIES})
 
-   	target_link_libraries(wamo ${CJSON_LIBRARIES})
+	set_target_properties(${PLUGIN_NAME} PROPERTIES PREFIX "")
+	set_target_properties(${PLUGIN_NAME} PROPERTIES IMPORTED_IMPLIB ${CJSON_LIBRARIES})
+
+	target_link_libraries(${PLUGIN_NAME} PRIVATE ${CJSON_LIBRARIES})
+
 	if(WIN32)
-		set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-		set_target_properties(wamo PROPERTIES IMPORTED_IMPLIB mosquitto)
-		target_link_libraries(wamo mosquitto)
-		install(TARGETS wamo
-			DESTINATION "${CMAKE_INSTALL_BINDIR}")
-	else()
-		install(TARGETS wamo
-			RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-			LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")
-	endif()
+		target_link_libraries(${PLUGIN_NAME} PRIVATE mosquitto)		
+	endif()	
 
 endif()

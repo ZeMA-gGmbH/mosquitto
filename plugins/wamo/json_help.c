@@ -71,22 +71,23 @@ int json_del_id_from_array(cJSON* json, const char* name, const char* id)
 
 	jtmp = cJSON_GetObjectItem(json, name);
 	if (jtmp) {
-		mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: deleting item from array .. debug 1");
+		// mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: deleting item from array .. debug 1");
 		if (cJSON_IsArray(jtmp) == true) {
 			// cJSON_DeleteItemFromObject(json, name);
-			mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: deleting item from array .. debug 2");
+			// mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: deleting item from array .. debug 2");
 			cJSON_ArrayForEach(tid, jtmp)
 			{	
 								
 				if ( strcmp( cJSON_GetStringValue(tid),id) == 0)
 				{
-					mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: deleting item from array .. debug 3");
+					// mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: deleting item from array .. debug 3");
 					detached_item = cJSON_DetachItemFromArray(jtmp, array_index);
 						
 				}
 				else
 				{
-					mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: deleting item from array .. debug 4");
+					return MOSQ_ERR_INVAL;
+					// mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: deleting item from array .. debug 4");
 				}			
 				array_index++;
 			}

@@ -1,10 +1,10 @@
 ﻿{
   "configurations": [
     {
-      "name": "x64-Debug",
+      "name": "x64-Release",
       "generator": "Ninja",
-      "configurationType": "Debug",
-      "inheritEnvironments": [ "clang_cl_x64" ],
+      "configurationType": "Release",
+      "inheritEnvironments": [ "msvc_x64" ],
       "buildRoot": "${projectDir}\\out\\build\\${name}",
       "installRoot": "${projectDir}\\out\\install\\${name}",
       "cmakeCommandArgs": "",
@@ -53,6 +53,11 @@
         },
         {
           "name": "WITH_STATIC_LIBRARIES",
+          "value": "True",
+          "type": "BOOL"
+        },
+        {
+          "name": "WITH_LIB_CPP",
           "value": "False",
           "type": "BOOL"
         }
