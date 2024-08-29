@@ -57,52 +57,102 @@ static int callback_control(int event, void* event_data, void* userdata)
 
 	const char * client_id = mosquitto_client_id(ed->client);
 	const char* topic = ed->topic;
-	const int access = ed->access;
-
-
+	const int access = ed->access;	
 
 	if (access == MOSQ_ACL_SUBSCRIBE) {
-		json_create_array(subscribedTopics, topic);
-		json_add_id_to_array(subscribedTopics, topic, client_id);
-		char* json_string = cJSON_Print(subscribedTopics);
-		char* payload = cJSON_PrintUnformatted(subscribedTopics);
-		mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: client with id %s subscribed to topic %s", client_id, topic);
-		mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: subscribed topics %s", json_string);
+		mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: client with ID %s subscribed to topic %s", client_id, topic);
 
-		if (payload == NULL) return MOSQ_ERR_MALFORMED_PACKET;
+		json_err_t rc = json_create_array(subscribedTopics, topic);
+		if ((rc == JSON_ERR_SUCCESS) || (rc == JSON_ERR_ARRAY_EXISTS)) {
+			if (json_add_id_to_array(subscribedTopics, topic, client_id) == JSON_ERR_SUCCESS) {
+				char* json_string = cJSON_Print(subscribedTopics);
+				char* payload = cJSON_PrintUnformatted(subscribedTopics);
 
-		uint32_t payload_len = strlen(payload);
-		if (payload_len > MQTT_MAX_PAYLOAD) {
-			free(payload);
-			return MOSQ_ERR_PAYLOAD_SIZE;
+				mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: new subscribed topics %s", json_string);
+
+				if (payload == NULL) return MOSQ_ERR_MALFORMED_PACKET;
+
+				uint32_t payload_len = strlen(payload);
+				if (payload_len > MQTT_MAX_PAYLOAD) {
+					free(payload);
+					return MOSQ_ERR_PAYLOAD_SIZE;
+				}
+
+				mosquitto_broker_publish_copy(NULL, "mqtt/subscriptions",
+					(int)payload_len, payload, 0, 1, NULL);
+			}
+			else
+			{
+				mosquitto_log_printf(MOSQ_LOG_INFO, "the specified object item does not exist or is not an array");
+			}
+			
+		}
+		else {
+			mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: something went wrong while attaching the client ID to JSON object. "\
+												"Looks like the specified obejkt item already exists, but is not an array");
 		}
 		
-		mosquitto_broker_publish_copy(NULL, "mqtt/subscriptions",
-			(int)payload_len, payload, 0, 0, NULL);
 	}
 	else if (access == MOSQ_ACL_UNSUBSCRIBE) {
-		json_del_id_from_array(subscribedTopics, topic, client_id);
-		char* json_string = cJSON_Print(subscribedTopics);
-		char* payload = cJSON_PrintUnformatted(subscribedTopics);
-		mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: client with id %s unscribed to topic %s", client_id, topic);
-		mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: subscribed topics %s", json_string);
+		mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: client with ID %s unscribed to topic %s", client_id, topic);
 
-		if (payload == NULL) return MOSQ_ERR_MALFORMED_PACKET;
+		json_err_t rc = json_del_id_from_array(subscribedTopics, topic, client_id);
+		if (rc == JSON_ERR_SUCCESS) {
+			char* json_string = cJSON_Print(subscribedTopics);
+			char* payload = cJSON_PrintUnformatted(subscribedTopics);
+			mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: subscribed topics %s", json_string);
 
-		uint32_t payload_len = strlen(payload);
-		if (payload_len > MQTT_MAX_PAYLOAD) {
-			free(payload);
-			return MOSQ_ERR_PAYLOAD_SIZE;
+			if (payload == NULL) return MOSQ_ERR_MALFORMED_PACKET;
+
+			uint32_t payload_len = strlen(payload);
+			if (payload_len > MQTT_MAX_PAYLOAD) {
+				free(payload);
+				return MOSQ_ERR_PAYLOAD_SIZE;
+			}
+			mosquitto_broker_publish_copy(NULL, "mqtt/subscriptions",
+				(int)payload_len, payload, 0, 1, NULL);
 		}
-		mosquitto_broker_publish_copy(NULL, "mqtt/subscriptions",
-			(int)payload_len, payload, 0, 0, NULL);
+		else
+		{
+			mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: something went wrong while deleting the client ID from JSON object. "\
+												"The specified object item does not exist or is not an array");
+		}
+		
 	}
-
-
 
 	return MOSQ_ERR_SUCCESS; 
 }
 
+static int callback_disconnect(int event, void* event_data, void* userdata)
+{
+	struct mosquitto_evt_disconnect* ed = event_data;
+
+	UNUSED(event);
+	UNUSED(userdata);
+
+	const char* client_id = mosquitto_client_id(ed->client);
+
+	json_del_clientid(subscribedTopics, client_id);
+
+	char* json_string = cJSON_Print(subscribedTopics);
+	char* payload = cJSON_PrintUnformatted(subscribedTopics);
+	mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: client with ID %s disconnected", client_id );
+	mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: subscribed topics %s", json_string);
+
+	if (payload == NULL) return MOSQ_ERR_MALFORMED_PACKET;
+
+	uint32_t payload_len = strlen(payload);
+	if (payload_len > MQTT_MAX_PAYLOAD) {
+		free(payload);
+		return MOSQ_ERR_PAYLOAD_SIZE;
+	}
+	mosquitto_broker_publish_copy(NULL, "mqtt/subscriptions",
+		(int)payload_len, payload, 0, 1, NULL);
+
+
+	return MOSQ_ERR_SUCCESS;
+
+}
 
 static int callback_message(int event, void* event_data, void* userdata)
 {
@@ -176,6 +226,20 @@ int mosquitto_plugin_init(mosquitto_plugin_id_t* identifier, void** user_data, s
 		return rc;
 	}
 
+
+	rc = mosquitto_callback_register(mosq_pid, MOSQ_EVT_DISCONNECT, callback_disconnect, NULL, NULL);
+	if (rc == MOSQ_ERR_ALREADY_EXISTS) {
+		mosquitto_log_printf(MOSQ_LOG_ERR, "Error: Dynamic security plugin can only be loaded once.");
+		return rc;
+	}
+	else if (rc == MOSQ_ERR_NOMEM) {
+		mosquitto_log_printf(MOSQ_LOG_ERR, "Error: Out of memory.");
+		return rc;
+	}
+	else if (rc != MOSQ_ERR_SUCCESS) {
+		return rc;
+	}
+
 	return MOSQ_ERR_SUCCESS;
 	
 
@@ -187,5 +251,10 @@ int mosquitto_plugin_cleanup(void* user_data, struct mosquitto_opt* opts, int op
 	UNUSED(opts);
 	UNUSED(opt_count);
 
-	return mosquitto_callback_unregister(mosq_pid, MOSQ_EVT_ACL_CHECK, callback_control, NULL);
+	if (mosq_pid) {
+		mosquitto_callback_unregister(mosq_pid, MOSQ_EVT_ACL_CHECK, callback_control, NULL);
+		mosquitto_callback_unregister(mosq_pid, MOSQ_EVT_DISCONNECT, callback_disconnect, NULL);
+	}
+
+	return MOSQ_ERR_SUCCESS;
 }

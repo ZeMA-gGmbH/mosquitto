@@ -16,16 +16,16 @@ Contributors:
 #include "mosquitto.h"
 #include "mosquitto_broker.h"
 
-int json_create_array(cJSON* json, const char* name) {
+json_err_t json_create_array(cJSON* json, const char* name) {
 	cJSON* jtmp;
 
 	jtmp = cJSON_GetObjectItem(json, name);
 	if (jtmp) {
 		if (cJSON_IsArray(jtmp) == true) {
-			return MOSQ_ERR_INVAL;
+			return JSON_ERR_ARRAY_EXISTS;
 		}
 		else {
-			cJSON_AddArrayToObject(json, name);
+			return JSON_ERR_TYPE_INVAL;
 		}
 				
 	}
@@ -33,11 +33,11 @@ int json_create_array(cJSON* json, const char* name) {
 		cJSON_AddArrayToObject(json, name);
 	}
 
-	return MOSQ_ERR_SUCCESS;
+	return JSON_ERR_SUCCESS;
 
 }
 
-int json_add_id_to_array(cJSON* json, const char* name, const char * id)
+json_err_t json_add_id_to_array(cJSON* json, const char* name, const char * id)
 {	
 	cJSON* jtmp;
 	cJSON* tid;
@@ -49,19 +49,19 @@ int json_add_id_to_array(cJSON* json, const char* name, const char * id)
 			cJSON_AddItemToArray(jtmp, tid);
 		}
 		else {
-			return MOSQ_ERR_INVAL;
+			return JSON_ERR_TYPE_INVAL;
 		}
 
 	}
 	else {
-		return MOSQ_ERR_INVAL;
+		return JSON_ERR_SYNTAX;
 	}
 
-	return MOSQ_ERR_SUCCESS;
+	return JSON_ERR_SUCCESS;
 
 }
 
-int json_del_id_from_array(cJSON* json, const char* name, const char* id)
+json_err_t json_del_id_from_array(cJSON* json, const char* name, const char* id)
 {
 	cJSON* jtmp = NULL;
 	cJSON* tid = NULL;
@@ -71,41 +71,54 @@ int json_del_id_from_array(cJSON* json, const char* name, const char* id)
 
 	jtmp = cJSON_GetObjectItem(json, name);
 	if (jtmp) {
-		// mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: deleting item from array .. debug 1");
 		if (cJSON_IsArray(jtmp) == true) {
-			// cJSON_DeleteItemFromObject(json, name);
-			// mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: deleting item from array .. debug 2");
 			cJSON_ArrayForEach(tid, jtmp)
-			{	
-								
+			{									
 				if ( strcmp( cJSON_GetStringValue(tid),id) == 0)
 				{
-					// mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: deleting item from array .. debug 3");
 					detached_item = cJSON_DetachItemFromArray(jtmp, array_index);
-						
+
 				}
-				else
-				{
-					return MOSQ_ERR_INVAL;
-					// mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: deleting item from array .. debug 4");
-				}			
 				array_index++;
 			}
-			// cJSON_ReplaceItemInObject(json, name, jtmp);
-			// cJSON_AddItemToObject(json, id, jtmp);
+	
 		}
 		else {
-			return MOSQ_ERR_INVAL;
+			return JSON_ERR_TYPE_INVAL;
 		}
 
 	}
 	else {
-		return MOSQ_ERR_INVAL;
+		return JSON_ERR_SYNTAX;
 	}
 
-	return MOSQ_ERR_SUCCESS;
+	return JSON_ERR_SUCCESS;
 
 }
+
+
+json_err_t json_del_clientid(cJSON* json, const char* id)
+{
+	cJSON* next_object = NULL;
+
+	cJSON_ArrayForEach(next_object, json)
+	{
+		if (next_object->string != NULL) {
+
+			mosquitto_log_printf(MOSQ_LOG_INFO, "wamo: deleting client with id %s from topic %s", id, next_object->string);
+			json_del_id_from_array(json, next_object->string, id);
+		}	
+
+		
+	}
+
+
+	return JSON_ERR_SUCCESS;
+
+}
+
+
+
 
 int json_get_bool(cJSON *json, const char *name, bool *value, bool optional, bool default_value)
 {
