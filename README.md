@@ -6,6 +6,14 @@ and 3.1 of the MQTT protocol. It also includes a C and C++ client library, and
 the `mosquitto_pub` and `mosquitto_sub` utilities for publishing and
 subscribing.
 
+<span style="color:red">
+
+## !! PLUGIN NOTES !!
+
+</span>
+
+This fork just adds a plugin to the origin of the project. This plugin mirrors all subscriptions and unsubscriptions to a spezific topic, to ensure that all clients of our adaptable assembly system are able to receive these events. A JSON object with all subscribed topics and Client IDs is published to the topic `mqtt/subscriptions` for the events subscribe, unsubscribe and disconnect. 
+
 ## Links
 
 See the following links for more information on MQTT:
